@@ -11,7 +11,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
 
 /**
  * @author: when
@@ -20,16 +20,16 @@ import java.util.function.Consumer;
 public class KeyEventApp extends BaseApp {
 
     // console for logging key events
-    private ListView<String> logConsole;
+    private ListView<String> console;
 
     @Override
     protected Parent createContent() {
-        logConsole = createLoggingConsole();
+        console = createLoggingConsole();
 
         // create text box for typing
         TextField textBox = createTextBox();
 
-        return createVBox(textBox, logConsole);
+        return createVBox(textBox, console);
     }
 
     private ListView<String> createLoggingConsole() {
@@ -55,27 +55,26 @@ public class KeyEventApp extends BaseApp {
         TextField textBox = new TextField();
         textBox.setPromptText("Write here");
         textBox.setStyle("-fx-font-size: 26;");
-        textBox.setOnKeyPressed(displayInConsole("Key pressed: "));
-        textBox.setOnKeyReleased(displayInConsole("Key released: "));
-        textBox.setOnKeyTyped(displayInConsoleWithLogic("Key typed: "));
+        textBox.setOnKeyPressed(displayInConsole("Key pressed: ", this::simpleConcat));
+        textBox.setOnKeyReleased(displayInConsole("Key pressed: ", this::simpleConcat));
+        textBox.setOnKeyTyped(displayInConsole("Key typed: ", this::complexConcat));
 
         return textBox;
     }
 
-    private EventHandler<? super KeyEvent> displayInConsole(String prefix) {
-        Consumer<KeyEvent> simpleDisplay = e -> logConsole.getItems().add(prefix + e.getText());
-        return createKeyEventListener(simpleDisplay);
-    }
-
-    private EventHandler<? super KeyEvent> displayInConsoleWithLogic(String prefix) {
-        Consumer<KeyEvent> displayWithLogic = (e) -> {
-            String text = concatKey(prefix, e);
-            logConsole.getItems().add(text);
+    private EventHandler<? super KeyEvent> displayInConsole(String prefix, BiFunction<String, KeyEvent,
+            String> biFunction) {
+        return event -> {
+            String text = biFunction.apply(prefix, event);
+            console.getItems().add(text);
         };
-        return createKeyEventListener(displayWithLogic);
     }
 
-    private String concatKey(String prefix, KeyEvent e) {
+    private String simpleConcat(String prefix, KeyEvent e) {
+        return prefix + e.getText();
+    }
+
+    private String complexConcat(String prefix, KeyEvent e) {
         String text = prefix + e.getCharacter();
         if (e.isAltDown()) {
             text += " , alt down";
@@ -90,10 +89,6 @@ public class KeyEventApp extends BaseApp {
             text += " , shift down";
         }
         return text;
-    }
-
-    private EventHandler<? super KeyEvent> createKeyEventListener(Consumer<KeyEvent> consumer) {
-        return consumer::accept;
     }
 
     private VBox createVBox(Node... nodes) {
